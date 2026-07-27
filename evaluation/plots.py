@@ -3,6 +3,22 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
+# ---------- Style ----------
+plt.style.use("seaborn-v0_8-whitegrid")
+
+plt.rcParams.update({
+    "figure.dpi": 300,
+    "savefig.dpi": 300,
+    "font.family": "serif",
+    "font.size": 11,
+    "axes.labelsize": 11,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+    "legend.fontsize": 10,
+})
+
+
+# ---------- Paths ----------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TABLE_PATH = os.path.join(
@@ -22,25 +38,62 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 comparison = pd.read_csv(TABLE_PATH)
 
-plt.figure(figsize=(8, 5))
-plt.bar(comparison["Model"], comparison["MAE"])
-plt.ylabel("MAE")
-plt.title("Mean Absolute Error by Model")
-plt.xticks(rotation=20)
+
+# ---------- MAE Bar Chart ----------
+fig, ax = plt.subplots(figsize=(6, 4))
+
+ax.bar(
+    comparison["Model"],
+    comparison["MAE"],
+    color="#4C72B0",
+    edgecolor="black",
+    linewidth=0.8
+)
+
+ax.set_xlabel("Model")
+ax.set_ylabel("Mean Absolute Error")
+
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+plt.xticks(rotation=15)
 plt.tight_layout()
+
 plt.savefig(os.path.join(OUTPUT_DIR, "mae_comparison.png"))
+plt.savefig(os.path.join(OUTPUT_DIR, "mae_comparison.pdf"))
 plt.close()
 
-plt.figure(figsize=(8, 5))
-plt.bar(comparison["Model"], comparison["RMSE"])
-plt.ylabel("RMSE")
-plt.title("Root Mean Squared Error by Model")
-plt.xticks(rotation=20)
+
+# ---------- RMSE Bar Chart ----------
+fig, ax = plt.subplots(figsize=(6, 4))
+
+ax.bar(
+    comparison["Model"],
+    comparison["RMSE"],
+    color="#55A868",
+    edgecolor="black",
+    linewidth=0.8
+)
+
+ax.set_xlabel("Model")
+ax.set_ylabel("Root Mean Squared Error")
+
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+plt.xticks(rotation=15)
 plt.tight_layout()
+
 plt.savefig(os.path.join(OUTPUT_DIR, "rmse_comparison.png"))
+plt.savefig(os.path.join(OUTPUT_DIR, "rmse_comparison.pdf"))
 plt.close()
 
-best_model = comparison.loc[comparison["MAE"].idxmin(), "Model"]
+
+# ---------- Best Model ----------
+best_model = comparison.loc[
+    comparison["MAE"].idxmin(),
+    "Model"
+]
 
 PREDICTION_PATH = os.path.join(
     BASE_DIR,
@@ -52,18 +105,46 @@ PREDICTION_PATH = os.path.join(
 pred = pd.read_csv(PREDICTION_PATH)
 pred["date"] = pd.to_datetime(pred["date"])
 
-plt.figure(figsize=(6, 6))
-plt.scatter(pred["actual"], pred["predicted"], alpha=0.5)
-plt.xlabel("Actual Volatility")
-plt.ylabel("Predicted Volatility")
-plt.title(f"Actual vs Predicted Volatility ({best_model})")
+
+# ---------- Scatter Plot ----------
+fig, ax = plt.subplots(figsize=(5.5, 5.5))
+
+ax.scatter(
+    pred["actual"],
+    pred["predicted"],
+    color="#4C72B0",
+    alpha=0.6,
+    s=18
+)
+
+lims = [
+    min(pred["actual"].min(), pred["predicted"].min()),
+    max(pred["actual"].max(), pred["predicted"].max())
+]
+
+ax.plot(lims, lims, "r--", linewidth=1.5)
+
+ax.set_xlim(lims)
+ax.set_ylim(lims)
+
+ax.set_xlabel("Actual Annualized Volatility")
+ax.set_ylabel("Predicted Annualized Volatility")
+
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
 plt.tight_layout()
+
 plt.savefig(os.path.join(OUTPUT_DIR, "actual_vs_predicted.png"))
+plt.savefig(os.path.join(OUTPUT_DIR, "actual_vs_predicted.pdf"))
 plt.close()
 
+
+# ---------- Time Series ----------
 stocks = ["NVDA", "PLTR", "WMT", "SPX"]
 
 for ticker in stocks:
+
     stock_df = pred[pred["ticker"] == ticker]
 
     if stock_df.empty:
@@ -71,16 +152,39 @@ for ticker in stocks:
 
     stock_df = stock_df.sort_values("date")
 
-    plt.figure(figsize=(12, 5))
-    plt.plot(stock_df["date"], stock_df["actual"], label="Actual")
-    plt.plot(stock_df["date"], stock_df["predicted"], label="Predicted")
-    plt.title(f"{ticker}: Actual vs Predicted Volatility")
-    plt.xlabel("Date")
-    plt.ylabel("Annualized Volatility")
-    plt.legend()
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    ax.plot(
+        stock_df["date"],
+        stock_df["actual"],
+        color="black",
+        linewidth=2,
+        label="Actual"
+    )
+
+    ax.plot(
+        stock_df["date"],
+        stock_df["predicted"],
+        color="#4C72B0",
+        linestyle="--",
+        linewidth=2,
+        label="Predicted"
+    )
+
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Annualized Volatility")
+
+    ax.legend(frameon=False)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
     plt.tight_layout()
 
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{ticker}_time_series.png"))
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{ticker.lower()}_time_series.png"))
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{ticker.lower()}_time_series.pdf"))
+
     plt.close()
+
 
 print("Figures saved!")
