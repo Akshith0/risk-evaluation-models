@@ -31,15 +31,27 @@ y_train = train["target_volatility"]
 X_test = test[features]
 y_true = test["target_volatility"]
 
-model = QuantileRegressor(
-    quantile=0.5,
-    alpha=0.001,
-    solver="highs"
-)
+results = test[["ticker", "date"]].copy()
+results["actual"] = y_true.values
 
-model.fit(X_train, y_train)
+quantiles = [0.1, 0.5, 0.9]
 
-y_pred = model.predict(X_test)
+for q in quantiles:
+
+    model = QuantileRegressor(
+        quantile=q,
+        alpha=0.001,
+        solver="highs"
+    )
+
+    model.fit(X_train, y_train)
+
+    preds = model.predict(X_test)
+
+    # Save predictions
+    results[f"q{int(q * 100)}"] = preds
+
+y_pred = results["q50"]
 
 mae = mean_absolute_error(y_true, y_pred)
 rmse = root_mean_squared_error(y_true, y_pred)
@@ -47,16 +59,15 @@ rmse = root_mean_squared_error(y_true, y_pred)
 print(f"MAE : {mae:.6f}")
 print(f"RMSE: {rmse:.6f}")
 
-results = test[["ticker", "date"]].copy()
-results["actual"] = y_true
-results["predicted"] = y_pred
-
 OUTPUT_DIR = os.path.join(BASE_DIR, "results", "predictions")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 results.to_csv(
-    os.path.join(OUTPUT_DIR, "quantile_regression_predictions.csv"),
+    os.path.join(
+        OUTPUT_DIR,
+        "quantile_regression_predictions.csv"
+    ),
     index=False
 )
 
-print("Quantile regression predictions saved!")
+print("Multi-quantile regression predictions saved!")

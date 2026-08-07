@@ -2,8 +2,6 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
-# ---------- Style ----------
 plt.style.use("seaborn-v0_8-whitegrid")
 
 plt.rcParams.update({
@@ -17,8 +15,6 @@ plt.rcParams.update({
     "legend.fontsize": 10,
 })
 
-
-# ---------- Paths ----------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TABLE_PATH = os.path.join(
@@ -38,8 +34,6 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 comparison = pd.read_csv(TABLE_PATH)
 
-
-# ---------- MAE Bar Chart ----------
 fig, ax = plt.subplots(figsize=(6, 4))
 
 ax.bar(
@@ -63,8 +57,6 @@ plt.savefig(os.path.join(OUTPUT_DIR, "mae_comparison.png"))
 plt.savefig(os.path.join(OUTPUT_DIR, "mae_comparison.pdf"))
 plt.close()
 
-
-# ---------- RMSE Bar Chart ----------
 fig, ax = plt.subplots(figsize=(6, 4))
 
 ax.bar(
@@ -88,8 +80,6 @@ plt.savefig(os.path.join(OUTPUT_DIR, "rmse_comparison.png"))
 plt.savefig(os.path.join(OUTPUT_DIR, "rmse_comparison.pdf"))
 plt.close()
 
-
-# ---------- Best Model ----------
 best_model = comparison.loc[
     comparison["MAE"].idxmin(),
     "Model"
@@ -105,8 +95,9 @@ PREDICTION_PATH = os.path.join(
 pred = pd.read_csv(PREDICTION_PATH)
 pred["date"] = pd.to_datetime(pred["date"])
 
+if "q50" in pred.columns:
+    pred["predicted"] = pred["q50"]
 
-# ---------- Scatter Plot ----------
 fig, ax = plt.subplots(figsize=(5.5, 5.5))
 
 ax.scatter(
@@ -139,8 +130,6 @@ plt.savefig(os.path.join(OUTPUT_DIR, "actual_vs_predicted.png"))
 plt.savefig(os.path.join(OUTPUT_DIR, "actual_vs_predicted.pdf"))
 plt.close()
 
-
-# ---------- Time Series ----------
 stocks = ["NVDA", "PLTR", "WMT", "SPX"]
 
 for ticker in stocks:
@@ -162,14 +151,36 @@ for ticker in stocks:
         label="Actual"
     )
 
-    ax.plot(
-        stock_df["date"],
-        stock_df["predicted"],
-        color="#4C72B0",
-        linestyle="--",
-        linewidth=2,
-        label="Predicted"
-    )
+    if {"q10", "q90"}.issubset(stock_df.columns):
+
+        ax.fill_between(
+            stock_df["date"],
+            stock_df["q10"],
+            stock_df["q90"],
+            color="#4C72B0",
+            alpha=0.20,
+            label="Q10-Q90 Interval"
+        )
+
+        ax.plot(
+            stock_df["date"],
+            stock_df["q50"],
+            color="#4C72B0",
+            linestyle="--",
+            linewidth=2,
+            label="Median Forecast (Q50)"
+        )
+
+    else:
+
+        ax.plot(
+            stock_df["date"],
+            stock_df["predicted"],
+            color="#4C72B0",
+            linestyle="--",
+            linewidth=2,
+            label="Predicted"
+        )
 
     ax.set_xlabel("Date")
     ax.set_ylabel("Annualized Volatility")
@@ -181,10 +192,20 @@ for ticker in stocks:
 
     plt.tight_layout()
 
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{ticker.lower()}_time_series.png"))
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{ticker.lower()}_time_series.pdf"))
+    plt.savefig(
+        os.path.join(
+            OUTPUT_DIR,
+            f"{ticker.lower()}_time_series.png"
+        )
+    )
+
+    plt.savefig(
+        os.path.join(
+            OUTPUT_DIR,
+            f"{ticker.lower()}_time_series.pdf"
+        )
+    )
 
     plt.close()
-
 
 print("Figures saved!")
